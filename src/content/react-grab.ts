@@ -105,6 +105,44 @@ window.addEventListener("react-grab:init", (event) => {
   forceAutoCopyDefaultAction(pageApi);
 });
 
+// react-grab keeps a tiny collapsed toolbar stub on the page even when
+// setEnabled(false) is applied. The user's expectation is that "OFF means
+// invisible," so toggle the shadow-DOM host's visibility directly. The host
+// is the only element marked with data-react-grab in the document tree.
+const REACT_GRAB_HOST_SELECTOR = "[data-react-grab]";
+
+const setReactGrabHostVisible = (visible: boolean): void => {
+  const hosts = document.querySelectorAll<HTMLElement>(REACT_GRAB_HOST_SELECTOR);
+  for (const host of hosts) {
+    // The shadow host lives directly under <body>; the inner [data-react-grab]
+    // div is inside its shadow root. We only want to toggle the outer host.
+    if (host.parentElement === document.body || host.parentElement === document.documentElement) {
+      host.style.display = visible ? "" : "none";
+    }
+  }
+};
+
+// react-grab mounts/remounts its host in a setTimeout (MOUNT_ROOT_RECHECK_DELAY_MS),
+// and frameworks like Next.js can blow it away during hydration. Re-apply the
+// hidden style on every mutation to <body> so the host stays hidden after
+// re-mounts. Cheap because we only touch matching nodes.
+let lastHostVisibility: boolean | null = null;
+let hostObserver: MutationObserver | null = null;
+
+const ensureHostObserver = (): void => {
+  if (hostObserver || !document.body) return;
+  hostObserver = new MutationObserver(() => {
+    if (lastHostVisibility !== null) setReactGrabHostVisible(lastHostVisibility);
+  });
+  hostObserver.observe(document.body, { childList: true });
+};
+
+const applyHostVisibility = (visible: boolean): void => {
+  lastHostVisibility = visible;
+  setReactGrabHostVisible(visible);
+  ensureHostObserver();
+};
+
 const handleToggle = async (enabled: boolean): Promise<void> => {
   await initializeReactGrab();
   const api = getActiveApi();
@@ -113,6 +151,7 @@ const handleToggle = async (enabled: boolean): Promise<void> => {
   if (api.isEnabled() !== enabled) {
     api.setEnabled(enabled);
   }
+  applyHostVisibility(enabled);
 };
 
 window.addEventListener("message", (event: MessageEvent) => {
@@ -158,6 +197,7 @@ const startup = async (): Promise<void> => {
   if (api.isEnabled() !== initialState.enabled) {
     api.setEnabled(initialState.enabled);
   }
+  applyHostVisibility(initialState.enabled);
 };
 
 if (document.readyState === "loading") {

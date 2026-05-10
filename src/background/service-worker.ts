@@ -1,9 +1,24 @@
 const STORAGE_KEY = "react_grab_enabled";
+const LEGACY_TOOLBAR_STATE_KEY = "react_grab_toolbar_state";
 
 const DEBUG = true;
 const log = (...args: unknown[]): void => {
   if (DEBUG) console.log("[grab-context/bg]", ...args);
 };
+
+// One-shot cleanup. Earlier versions of this extension synced the toolbar
+// state through chrome.storage, which caused a runaway feedback loop with
+// react-grab's in-page Toolbar component. The toolbar state now lives only
+// in window.localStorage. Wipe the stale chrome.storage value so users on
+// the previous version stop receiving its onChanged echoes.
+chrome.runtime.onInstalled.addListener(() => {
+  void chrome.storage.local.remove(LEGACY_TOOLBAR_STATE_KEY).then(() => {
+    log("removed legacy chrome.storage key", LEGACY_TOOLBAR_STATE_KEY);
+  });
+});
+chrome.runtime.onStartup.addListener(() => {
+  void chrome.storage.local.remove(LEGACY_TOOLBAR_STATE_KEY);
+});
 
 const getGlobalEnabled = async (): Promise<boolean> => {
   const result = await chrome.storage.local.get(STORAGE_KEY);

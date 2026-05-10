@@ -1,31 +1,23 @@
-// This script runs in ISOLATED world and bridges chrome.runtime messages to MAIN world.
+// This script runs in ISOLATED world and bridges chrome.* APIs to MAIN world.
+//
+// Scope: only the global enable/disable flag (`react_grab_enabled`) is
+// synchronized via chrome.storage. The toolbar's UI state (edge, ratio,
+// collapsed, defaultAction) is NOT mirrored here — react-grab already
+// persists it in window.localStorage per origin, which is the correct scope
+// for a per-origin UI preference.
+//
+// An earlier version of this bridge synced the toolbar state across tabs via
+// chrome.storage. That created a feedback loop: applying an external toolbar
+// state to react-grab causes the in-page Toolbar component to re-emit its
+// own state in a microtask, which the bridge wrote back to chrome.storage,
+// which fired storage.onChanged in every tab including this one, which
+// applied it again, and so on. The loop became unbreakable once two tabs
+// were oscillating because each tab's dedup couldn't suppress the other
+// tab's writes. Removing the round-trip kills the loop at the source.
 
 const DEBUG = true;
 const log = (...args: unknown[]): void => {
   if (DEBUG) console.log("[grab-context/bridge]", ...args);
-};
-
-// Echo guard. When the page tells us to save a toolbar state we remember its
-// JSON. When storage.onChanged fires with the same JSON, we swallow the
-// notification — it is our own write coming back, not a remote update from
-// another tab. Without this, react-grab's Solid signal updates inside the
-// in-page Toolbar component re-emit a flipped state on every external apply,
-// turning the storage round-trip into a runaway loop.
-let lastSelfWrittenToolbarStateJson: string | null = null;
-const ECHO_TTL_MS = 2000;
-let lastSelfWriteAt = 0;
-
-const matchesSelfWrite = (newValue: unknown): boolean => {
-  if (lastSelfWrittenToolbarStateJson === null) return false;
-  if (Date.now() - lastSelfWriteAt > ECHO_TTL_MS) {
-    lastSelfWrittenToolbarStateJson = null;
-    return false;
-  }
-  try {
-    return JSON.stringify(newValue) === lastSelfWrittenToolbarStateJson;
-  } catch {
-    return false;
-  }
 };
 
 chrome.storage.onChanged.addListener((changes) => {
@@ -33,18 +25,6 @@ chrome.storage.onChanged.addListener((changes) => {
     const newEnabled = changes.react_grab_enabled.newValue ?? true;
     log("storage.onChanged enabled ->", newEnabled);
     window.postMessage({ type: "__REACT_GRAB_EXTENSION_TOGGLE__", enabled: newEnabled }, "*");
-  }
-
-  if (changes.react_grab_toolbar_state) {
-    const newState = changes.react_grab_toolbar_state.newValue;
-    if (!newState) return;
-    if (matchesSelfWrite(newState)) {
-      log("storage.onChanged toolbarState (self-echo, suppressed)");
-      lastSelfWrittenToolbarStateJson = null;
-      return;
-    }
-    log("storage.onChanged toolbarState ->", newState);
-    window.postMessage({ type: "__REACT_GRAB_TOOLBAR_STATE_CHANGE__", state: newState }, "*");
   }
 });
 
@@ -64,30 +44,17 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
 window.addEventListener("message", (event) => {
   if (event.data?.type === "__REACT_GRAB_QUERY_STATE__") {
-    chrome.storage.local.get(["react_grab_enabled", "react_grab_toolbar_state"], (result) => {
+    chrome.storage.local.get(["react_grab_enabled"], (result) => {
       const enabled = result.react_grab_enabled ?? true;
-      const toolbarState = result.react_grab_toolbar_state ?? null;
-
       window.postMessage(
         {
           type: "__REACT_GRAB_STATE_RESPONSE__",
           enabled,
-          toolbarState,
+          toolbarState: null,
         },
         "*",
       );
     });
-  }
-
-  if (event.data?.type === "__REACT_GRAB_TOOLBAR_STATE_SAVE__") {
-    try {
-      lastSelfWrittenToolbarStateJson = JSON.stringify(event.data.state);
-      lastSelfWriteAt = Date.now();
-    } catch {
-      lastSelfWrittenToolbarStateJson = null;
-    }
-    log("page -> storage.set toolbarState", event.data.state);
-    chrome.storage.local.set({ react_grab_toolbar_state: event.data.state });
   }
 });
 

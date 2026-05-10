@@ -132,8 +132,13 @@ const handleToggle = async (enabled: boolean): Promise<void> => {
   await initializeReactGrab();
 
   const api = getActiveApi();
-  if (api) {
-    api.setEnabled(enabled);
+  if (!api) return;
+
+  api.setEnabled(enabled);
+  if (enabled && !api.isActive()) {
+    api.activate();
+  } else if (!enabled && api.isActive()) {
+    api.deactivate();
   }
 };
 

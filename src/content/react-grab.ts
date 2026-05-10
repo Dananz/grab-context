@@ -18,6 +18,11 @@ const isLocalhost =
 // copy action immediately when an element is clicked.
 const AUTO_COPY_ACTION_ID = "copy";
 
+const DEBUG = false;
+const log = (...args: unknown[]): void => {
+  if (DEBUG) console.log("[grab-context/page]", ...args);
+};
+
 const turndownService = new TurndownService();
 
 interface ToolbarState {
@@ -128,16 +133,51 @@ window.addEventListener("react-grab:init", (event) => {
   subscribeToStateChanges(pageApi);
 });
 
+// Track whether we've installed the continuous-pick plugin onto the active
+// API instance. The plugin re-activates the picker after every successful
+// copy so a single toolbar-icon click leaves the cursor permanently armed.
+const CONTINUOUS_PICK_PLUGIN = "grab-context-continuous-pick";
+let continuousPickInstalledOn: ReactGrabAPI | null = null;
+
+const installContinuousPick = (api: ReactGrabAPI): void => {
+  if (continuousPickInstalledOn === api) return;
+  continuousPickInstalledOn = api;
+  api.registerPlugin({
+    name: CONTINUOUS_PICK_PLUGIN,
+    hooks: {
+      onCopySuccess: () => {
+        // react-grab's executeCopyOperation deactivates the renderer after a
+        // copy when wasActivatedByToggle is true, which the public api.activate
+        // unavoidably sets. Re-arm the cursor on the next tick so it feels
+        // continuous and never appears to "toggle off".
+        log("onCopySuccess -> re-activate");
+        queueMicrotask(() => {
+          if (api.isEnabled() && !api.isActive()) {
+            api.activate();
+          }
+        });
+      },
+    },
+  });
+};
+
 const handleToggle = async (enabled: boolean): Promise<void> => {
+  log("handleToggle", enabled);
   await initializeReactGrab();
 
   const api = getActiveApi();
   if (!api) return;
 
-  api.setEnabled(enabled);
-  if (enabled && !api.isActive()) {
-    api.activate();
-  } else if (!enabled && api.isActive()) {
+  if (api.isEnabled() !== enabled) {
+    api.setEnabled(enabled);
+  }
+
+  if (enabled) {
+    installContinuousPick(api);
+    if (!api.isActive()) {
+      api.activate();
+    }
+  } else if (api.isActive()) {
     api.deactivate();
   }
 };

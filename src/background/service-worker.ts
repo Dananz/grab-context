@@ -1,5 +1,10 @@
 const STORAGE_KEY = "react_grab_enabled";
 
+const DEBUG = false;
+const log = (...args: unknown[]): void => {
+  if (DEBUG) console.log("[grab-context/bg]", ...args);
+};
+
 const getGlobalEnabled = async (): Promise<boolean> => {
   const result = await chrome.storage.local.get(STORAGE_KEY);
   const enabled = result[STORAGE_KEY] ?? true;
@@ -37,6 +42,7 @@ chrome.action.onClicked.addListener(async (tab) => {
 
   const currentEnabled = await getGlobalEnabled();
   const newEnabled = !currentEnabled;
+  log("action.onClicked", { from: currentEnabled, to: newEnabled, tabId: tab.id });
   await setGlobalEnabled(newEnabled);
 
   await updateActionIcon(tab.id, newEnabled);
@@ -72,3 +78,5 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
     await updateActionIcon(tabId, enabled);
   }
 });
+
+export {};

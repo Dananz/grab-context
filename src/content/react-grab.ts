@@ -18,9 +18,37 @@ const isLocalhost =
 // copy action immediately when an element is clicked.
 const AUTO_COPY_ACTION_ID = "copy";
 
-const DEBUG = false;
+const DEBUG = true;
 const log = (...args: unknown[]): void => {
   if (DEBUG) console.log("[grab-context/page]", ...args);
+};
+
+// Storm guard: if our own toolbar-state writes fire faster than this window,
+// silently drop further saves so a runaway feedback loop can't lock the page
+// or burn battery. Resets each second.
+const STATE_SAVE_BURST_MS = 1000;
+const STATE_SAVE_BURST_LIMIT = 12;
+let stateSaveBurstStart = 0;
+let stateSaveBurstCount = 0;
+let stateSaveBurstWarned = false;
+const isInStateSaveBurst = (): boolean => {
+  const now = Date.now();
+  if (now - stateSaveBurstStart > STATE_SAVE_BURST_MS) {
+    stateSaveBurstStart = now;
+    stateSaveBurstCount = 0;
+    stateSaveBurstWarned = false;
+  }
+  stateSaveBurstCount++;
+  if (stateSaveBurstCount > STATE_SAVE_BURST_LIMIT) {
+    if (!stateSaveBurstWarned) {
+      console.warn(
+        "[grab-context/page] toolbar-state save storm detected; dropping further saves for this second",
+      );
+      stateSaveBurstWarned = true;
+    }
+    return true;
+  }
+  return false;
 };
 
 const turndownService = new TurndownService();
@@ -50,6 +78,8 @@ const handleToolbarStateFromApi = (toolbarState: ToolbarState | null): void => {
     return;
   }
   lastToolbarState = toolbarState;
+  if (isInStateSaveBurst()) return;
+  log("save toolbarState", toolbarState);
   window.postMessage({ type: "__REACT_GRAB_TOOLBAR_STATE_SAVE__", state: toolbarState }, "*");
 };
 
@@ -133,52 +163,19 @@ window.addEventListener("react-grab:init", (event) => {
   subscribeToStateChanges(pageApi);
 });
 
-// Track whether we've installed the continuous-pick plugin onto the active
-// API instance. The plugin re-activates the picker after every successful
-// copy so a single toolbar-icon click leaves the cursor permanently armed.
-const CONTINUOUS_PICK_PLUGIN = "grab-context-continuous-pick";
-let continuousPickInstalledOn: ReactGrabAPI | null = null;
-
-const installContinuousPick = (api: ReactGrabAPI): void => {
-  if (continuousPickInstalledOn === api) return;
-  continuousPickInstalledOn = api;
-  api.registerPlugin({
-    name: CONTINUOUS_PICK_PLUGIN,
-    hooks: {
-      onCopySuccess: () => {
-        // react-grab's executeCopyOperation deactivates the renderer after a
-        // copy when wasActivatedByToggle is true, which the public api.activate
-        // unavoidably sets. Re-arm the cursor on the next tick so it feels
-        // continuous and never appears to "toggle off".
-        log("onCopySuccess -> re-activate");
-        queueMicrotask(() => {
-          if (api.isEnabled() && !api.isActive()) {
-            api.activate();
-          }
-        });
-      },
-    },
-  });
-};
-
+// NOTE: previous versions called api.activate() here so the cursor armed
+// immediately on toolbar-icon click. That triggered react-grab's
+// wasActivatedByToggle path, which deactivates the picker after every copy
+// and, combined with focus-loss handlers + chrome.storage echoes, caused a
+// runaway state cycle. Reverted to upstream-style enable/disable only — the
+// user clicks the in-page grab button to start picking.
 const handleToggle = async (enabled: boolean): Promise<void> => {
-  log("handleToggle", enabled);
+  log("handleToggle", { enabled });
   await initializeReactGrab();
-
   const api = getActiveApi();
   if (!api) return;
-
   if (api.isEnabled() !== enabled) {
     api.setEnabled(enabled);
-  }
-
-  if (enabled) {
-    installContinuousPick(api);
-    if (!api.isActive()) {
-      api.activate();
-    }
-  } else if (api.isActive()) {
-    api.deactivate();
   }
 };
 

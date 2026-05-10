@@ -1,6 +1,6 @@
 const STORAGE_KEY = "react_grab_enabled";
 
-const DEBUG = false;
+const DEBUG = true;
 const log = (...args: unknown[]): void => {
   if (DEBUG) console.log("[grab-context/bg]", ...args);
 };
@@ -45,31 +45,12 @@ chrome.action.onClicked.addListener(async (tab) => {
   log("action.onClicked", { from: currentEnabled, to: newEnabled, tabId: tab.id });
   await setGlobalEnabled(newEnabled);
 
-  await updateActionIcon(tab.id, newEnabled);
-
-  try {
-    await chrome.tabs.sendMessage(tab.id, {
-      type: "REACT_GRAB_TOGGLE",
-      enabled: newEnabled,
-    });
-  } catch {
-    // HACK: Content script may not be ready yet
-  }
-
-  const allTabs = await chrome.tabs.query({});
-  for (const otherTab of allTabs) {
-    if (otherTab.id && otherTab.id !== tab.id) {
-      await updateActionIcon(otherTab.id, newEnabled);
-      try {
-        await chrome.tabs.sendMessage(otherTab.id, {
-          type: "REACT_GRAB_TOGGLE",
-          enabled: newEnabled,
-        });
-      } catch {
-        // Tab may not have content script loaded
-      }
-    }
-  }
+  // Update only the active tab's badge synchronously. Other tabs pick up the
+  // new state from chrome.storage.onChanged in their bridge content script;
+  // their badges refresh on next chrome.tabs.onUpdated. Iterating every tab
+  // here previously blocked the action listener whenever a single content
+  // script was unresponsive, making the toolbar icon appear "stuck."
+  void updateActionIcon(tab.id, newEnabled);
 });
 
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {

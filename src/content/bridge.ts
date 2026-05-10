@@ -1,6 +1,6 @@
 // This script runs in ISOLATED world and bridges chrome.runtime messages to MAIN world.
 
-const DEBUG = false;
+const DEBUG = true;
 const log = (...args: unknown[]): void => {
   if (DEBUG) console.log("[grab-context/bridge]", ...args);
 };

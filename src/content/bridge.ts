@@ -58,4 +58,13 @@ window.addEventListener("message", (event) => {
   }
 });
 
+// Proactive broadcast on bridge load so the page's content script doesn't
+// depend on a poll/timeout race to know the initial enabled state. Runs at
+// document_start, before the page script has had a chance to query.
+chrome.storage.local.get(["react_grab_enabled"], (result) => {
+  const enabled = result.react_grab_enabled ?? true;
+  log("initial broadcast enabled ->", enabled);
+  window.postMessage({ type: "__REACT_GRAB_EXTENSION_TOGGLE__", enabled }, "*");
+});
+
 export {};

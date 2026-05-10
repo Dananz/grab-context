@@ -63,6 +63,10 @@ const initializeReactGrab = (): Promise<ReactGrabAPI | null> => {
   const activeApi = getActiveApi();
   if (activeApi) {
     extensionApi = activeApi;
+    // Idempotent — getToolbarState returns null until something has been set,
+    // so on the first call after picking up an existing API instance this
+    // installs the click-to-copy default. No-op otherwise.
+    forceAutoCopyDefaultAction(activeApi);
     return Promise.resolve(activeApi);
   }
 
@@ -72,6 +76,7 @@ const initializeReactGrab = (): Promise<ReactGrabAPI | null> => {
         const delayedApi = getActiveApi();
         if (delayedApi) {
           extensionApi = delayedApi;
+          forceAutoCopyDefaultAction(delayedApi);
           resolve(delayedApi);
           return;
         }
@@ -101,10 +106,10 @@ window.addEventListener("react-grab:init", (event) => {
 });
 
 const handleToggle = async (enabled: boolean): Promise<void> => {
-  log("handleToggle", { enabled });
   await initializeReactGrab();
   const api = getActiveApi();
   if (!api) return;
+  log("handleToggle", { wanted: enabled, current: api.isEnabled() });
   if (api.isEnabled() !== enabled) {
     api.setEnabled(enabled);
   }
@@ -143,8 +148,15 @@ const startup = async (): Promise<void> => {
   const initialState = await queryInitialState();
   const api = await initializeReactGrab();
   if (!api) return;
-  if (!initialState.enabled) {
-    api.setEnabled(false);
+  // Always reapply our preferred defaults. initializeReactGrab paths cover
+  // most cases, but reapplying here is cheap and protects against any
+  // ordering edge case where the override didn't run yet.
+  forceAutoCopyDefaultAction(api);
+  log("startup: applying initialState", initialState, {
+    isEnabledBefore: api.isEnabled(),
+  });
+  if (api.isEnabled() !== initialState.enabled) {
+    api.setEnabled(initialState.enabled);
   }
 };
 

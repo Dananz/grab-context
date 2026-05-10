@@ -143,20 +143,38 @@ const applyHostVisibility = (visible: boolean): void => {
   ensureHostObserver();
 };
 
-const handleToggle = async (enabled: boolean): Promise<void> => {
+type ToggleSource = "user" | "initial";
+
+const handleToggle = async (enabled: boolean, source: ToggleSource): Promise<void> => {
   await initializeReactGrab();
   const api = getActiveApi();
   if (!api) return;
-  log("handleToggle", { wanted: enabled, current: api.isEnabled() });
+  log("handleToggle", {
+    wanted: enabled,
+    source,
+    enabledBefore: api.isEnabled(),
+    activeBefore: api.isActive(),
+  });
   if (api.isEnabled() !== enabled) {
     api.setEnabled(enabled);
   }
   applyHostVisibility(enabled);
+  // Auto-arm selection mode only when the user clicked the toolbar icon.
+  // On initial page load we do NOT auto-arm: every refresh would otherwise
+  // start the picker even when the user just wanted to read the page.
+  if (source === "user") {
+    if (enabled && !api.isActive()) {
+      api.activate();
+    } else if (!enabled && api.isActive()) {
+      api.deactivate();
+    }
+  }
 };
 
 window.addEventListener("message", (event: MessageEvent) => {
   if (event.data?.type === "__REACT_GRAB_EXTENSION_TOGGLE__") {
-    void handleToggle(event.data.enabled);
+    const source: ToggleSource = event.data.source === "user" ? "user" : "initial";
+    void handleToggle(event.data.enabled, source);
   }
 });
 

@@ -51,6 +51,16 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 });
 
 window.addEventListener("message", (event) => {
+  if (event.data?.type === "__GRAB_CONTEXT_CAPTURE_REQUEST__") {
+    chrome.runtime.sendMessage({ type: "CAPTURE_VISIBLE_TAB" }, (response) => {
+      const err = chrome.runtime.lastError?.message;
+      const payload = err ? { ok: false, error: err } : response;
+      log("capture response", payload);
+      window.postMessage({ type: "__GRAB_CONTEXT_CAPTURE_RESPONSE__", payload }, "*");
+    });
+    return;
+  }
+
   if (event.data?.type === "__REACT_GRAB_QUERY_STATE__") {
     chrome.storage.local.get(["react_grab_enabled"], (result) => {
       const enabled = result.react_grab_enabled ?? true;

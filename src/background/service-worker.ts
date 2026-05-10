@@ -42,10 +42,27 @@ const updateActionIcon = async (tabId: number, enabled: boolean): Promise<void> 
   }
 };
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "GET_STATE") {
     getGlobalEnabled().then((enabled) => {
       sendResponse({ enabled });
+    });
+    return true;
+  }
+  if (message.type === "CAPTURE_VISIBLE_TAB") {
+    const windowId = sender.tab?.windowId;
+    if (windowId === undefined) {
+      sendResponse({ ok: false, error: "No window id on sender" });
+      return false;
+    }
+    chrome.tabs.captureVisibleTab(windowId, { format: "png" }, (dataUrl) => {
+      const err = chrome.runtime.lastError?.message;
+      if (err || !dataUrl) {
+        log("capture failed", err);
+        sendResponse({ ok: false, error: err ?? "Empty dataUrl" });
+        return;
+      }
+      sendResponse({ ok: true, dataUrl });
     });
     return true;
   }

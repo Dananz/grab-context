@@ -2,6 +2,8 @@ import { init } from "react-grab/core";
 import type { Options, ReactGrabAPI } from "react-grab";
 import TurndownService from "turndown";
 import { LOCALHOST_INIT_DELAY_MS, STATE_QUERY_TIMEOUT_MS } from "../constants.js";
+import { CrosshairOverlay } from "./crosshair.js";
+import { installScreenshotPlugin } from "./screenshot.js";
 
 declare global {
   interface Window {
@@ -24,6 +26,27 @@ const log = (...args: unknown[]): void => {
 };
 
 const turndownService = new TurndownService();
+const crosshair = new CrosshairOverlay();
+const CROSSHAIR_PLUGIN = "grab-context-crosshair";
+let crosshairInstalledOn: ReactGrabAPI | null = null;
+
+const installCrosshair = (api: ReactGrabAPI): void => {
+  if (crosshairInstalledOn === api) return;
+  crosshairInstalledOn = api;
+  api.registerPlugin({
+    name: CROSSHAIR_PLUGIN,
+    hooks: {
+      onActivate: () => {
+        log("crosshair show");
+        crosshair.show();
+      },
+      onDeactivate: () => {
+        log("crosshair hide");
+        crosshair.hide();
+      },
+    },
+  });
+};
 
 let extensionApi: ReactGrabAPI | null = null;
 
@@ -41,6 +64,8 @@ const createExtensionApi = (): ReactGrabAPI => {
   extensionApi = api;
   window.__REACT_GRAB__ = api;
   forceAutoCopyDefaultAction(api);
+  installCrosshair(api);
+  installScreenshotPlugin(api);
   return api;
 };
 
@@ -67,6 +92,8 @@ const initializeReactGrab = (): Promise<ReactGrabAPI | null> => {
     // so on the first call after picking up an existing API instance this
     // installs the click-to-copy default. No-op otherwise.
     forceAutoCopyDefaultAction(activeApi);
+    installCrosshair(activeApi);
+    installScreenshotPlugin(activeApi);
     return Promise.resolve(activeApi);
   }
 
@@ -77,6 +104,8 @@ const initializeReactGrab = (): Promise<ReactGrabAPI | null> => {
         if (delayedApi) {
           extensionApi = delayedApi;
           forceAutoCopyDefaultAction(delayedApi);
+          installCrosshair(delayedApi);
+          installScreenshotPlugin(delayedApi);
           resolve(delayedApi);
           return;
         }
@@ -103,6 +132,8 @@ window.addEventListener("react-grab:init", (event) => {
   extensionApi = pageApi;
   window.__REACT_GRAB__ = pageApi;
   forceAutoCopyDefaultAction(pageApi);
+  installCrosshair(pageApi);
+  installScreenshotPlugin(pageApi);
 });
 
 // react-grab keeps a tiny collapsed toolbar stub on the page even when

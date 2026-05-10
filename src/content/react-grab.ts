@@ -113,9 +113,16 @@ const createExtensionApi = (): ReactGrabAPI => {
 const forceAutoCopyDefaultAction = (api: ReactGrabAPI): void => {
   const current = api.getToolbarState();
   if (current?.defaultAction === AUTO_COPY_ACTION_ID) return;
-  isApplyingExternalState = true;
+  // Run the API mutation outside the guard so the resulting save propagates
+  // through the bridge to chrome.storage. Otherwise our preferred default
+  // action stays in react-grab's localStorage but never overrides the older
+  // value persisted in chrome.storage, and the next page load resets it.
   api.setToolbarState({ defaultAction: AUTO_COPY_ACTION_ID });
-  isApplyingExternalState = false;
+  const next = api.getToolbarState();
+  if (next) {
+    log("force defaultAction=copy -> persist", next);
+    window.postMessage({ type: "__REACT_GRAB_TOOLBAR_STATE_SAVE__", state: next }, "*");
+  }
 };
 
 const getActiveApi = (): ReactGrabAPI | null => {

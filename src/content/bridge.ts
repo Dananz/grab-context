@@ -5,6 +5,29 @@ const log = (...args: unknown[]): void => {
   if (DEBUG) console.log("[grab-context/bridge]", ...args);
 };
 
+// Echo guard. When the page tells us to save a toolbar state we remember its
+// JSON. When storage.onChanged fires with the same JSON, we swallow the
+// notification — it is our own write coming back, not a remote update from
+// another tab. Without this, react-grab's Solid signal updates inside the
+// in-page Toolbar component re-emit a flipped state on every external apply,
+// turning the storage round-trip into a runaway loop.
+let lastSelfWrittenToolbarStateJson: string | null = null;
+const ECHO_TTL_MS = 2000;
+let lastSelfWriteAt = 0;
+
+const matchesSelfWrite = (newValue: unknown): boolean => {
+  if (lastSelfWrittenToolbarStateJson === null) return false;
+  if (Date.now() - lastSelfWriteAt > ECHO_TTL_MS) {
+    lastSelfWrittenToolbarStateJson = null;
+    return false;
+  }
+  try {
+    return JSON.stringify(newValue) === lastSelfWrittenToolbarStateJson;
+  } catch {
+    return false;
+  }
+};
+
 chrome.storage.onChanged.addListener((changes) => {
   if (changes.react_grab_enabled) {
     const newEnabled = changes.react_grab_enabled.newValue ?? true;
@@ -14,10 +37,14 @@ chrome.storage.onChanged.addListener((changes) => {
 
   if (changes.react_grab_toolbar_state) {
     const newState = changes.react_grab_toolbar_state.newValue;
-    if (newState) {
-      log("storage.onChanged toolbarState ->", newState);
-      window.postMessage({ type: "__REACT_GRAB_TOOLBAR_STATE_CHANGE__", state: newState }, "*");
+    if (!newState) return;
+    if (matchesSelfWrite(newState)) {
+      log("storage.onChanged toolbarState (self-echo, suppressed)");
+      lastSelfWrittenToolbarStateJson = null;
+      return;
     }
+    log("storage.onChanged toolbarState ->", newState);
+    window.postMessage({ type: "__REACT_GRAB_TOOLBAR_STATE_CHANGE__", state: newState }, "*");
   }
 });
 
@@ -53,6 +80,12 @@ window.addEventListener("message", (event) => {
   }
 
   if (event.data?.type === "__REACT_GRAB_TOOLBAR_STATE_SAVE__") {
+    try {
+      lastSelfWrittenToolbarStateJson = JSON.stringify(event.data.state);
+      lastSelfWriteAt = Date.now();
+    } catch {
+      lastSelfWrittenToolbarStateJson = null;
+    }
     log("page -> storage.set toolbarState", event.data.state);
     chrome.storage.local.set({ react_grab_toolbar_state: event.data.state });
   }

@@ -1,0 +1,41 @@
+Grab Context bundles or derives from the following third-party software.
+All bundled dependencies are MIT licensed; their full license texts are
+available in the linked repositories and in node_modules after install.
+
+---
+
+react-grab
+Copyright (c) 2025 Aiden Bai
+https://github.com/aidenybai/react-grab
+License: MIT
+
+Pinned to version 0.1.29. Provides the element-selection cursor, React fiber
+walking via bippy, Vue 3 component detection (__vueParentComponent / __file),
+and Svelte component detection (__svelte_meta).
+
+---
+
+bippy
+Copyright (c) Aiden Bai
+https://github.com/aidenybai/bippy
+License: MIT
+
+Transitive dependency of react-grab. Walks React fiber internals.
+
+---
+
+Turndown
+Copyright (c) 2017+ Dom Christie
+https://github.com/mixmark-io/turndown
+License: MIT
+
+Converts copied HTML to Markdown.
+
+---
+
+Phosphor Icons
+Copyright (c) 2020 Helena Zhang & Tobias Fried
+https://github.com/phosphor-icons/core
+License: MIT
+
+Source for the cursor-click glyph used in the toolbar icon.

@@ -217,58 +217,148 @@ button { font-family: inherit; }
 }
 
 .demo__page {
-  padding: 2rem 1.75rem;
+  padding: clamp(1.5rem, 3vw, 2.25rem);
   background:
     linear-gradient(180deg, oklch(20% 0.014 340), oklch(17% 0.012 340));
   position: relative;
   overflow: hidden;
+  min-height: 360px;
+  cursor: none;
 }
-.fake-h1 { font-size: 1.7rem; font-weight: 700; margin: 0 0 0.4rem; letter-spacing: -0.02em; }
-.fake-p  { color: var(--fg-muted); font-size: 0.9rem; margin: 0 0 1.5rem; line-height: 1.5; max-width: 28ch; }
+.demo__page:not(.is-armed) { cursor: default; }
+.demo__page.is-armed * { cursor: none !important; }
+.demo__hint {
+  position: absolute; top: 0.75rem; right: 0.85rem;
+  font-family: var(--mono); font-size: 0.7rem;
+  color: var(--fg-dim);
+  background: oklch(15% 0.01 340 / 0.85);
+  border: 1px solid var(--line);
+  padding: 0.25rem 0.55rem; border-radius: 6px;
+  pointer-events: none;
+  opacity: 0; transition: opacity 0.2s var(--ease);
+}
+.demo__page:not(.is-armed) .demo__hint { opacity: 1; }
 
-.target {
-  display: inline-flex; align-items: center; gap: 0.55rem;
-  padding: 0.75rem 1.1rem;
-  background: oklch(73% 0.29 340 / 0.08);
-  color: var(--fg);
-  border: 1.5px dashed var(--brand);
-  border-radius: 10px;
-  font-weight: 600;
+.fake-h1 { font-size: 1.45rem; font-weight: 700; margin: 0 0 0.3rem; letter-spacing: -0.02em; }
+.fake-p  { color: var(--fg-muted); font-size: 0.86rem; margin: 0 0 1.4rem; line-height: 1.5; max-width: 30ch; }
+
+.demo__items {
+  display: flex; flex-direction: column; gap: 1.1rem;
+  align-items: flex-start;
+}
+
+/* pickable elements */
+.pickable {
   position: relative;
-  animation: targetPulse 2.4s var(--ease) infinite;
+  transition: outline-color 0.12s var(--ease), background 0.12s var(--ease);
+  outline: 1.5px dashed transparent;
+  outline-offset: 3px;
+  border-radius: 8px;
 }
-@keyframes targetPulse {
-  0%, 100% { box-shadow: 0 0 0 0 oklch(73% 0.29 340 / 0.5); }
-  50% { box-shadow: 0 0 0 8px oklch(73% 0.29 340 / 0); }
+.demo__page.is-armed .pickable.is-hover {
+  outline-color: var(--brand);
+  background: oklch(73% 0.29 340 / 0.06);
 }
-.target::after {
-  content: "<button>";
+.demo__page.is-armed .pickable.is-hover::before {
+  content: attr(data-tag);
   position: absolute;
-  top: -1.55rem; left: -0.25rem;
-  font-family: var(--mono); font-size: 0.72rem;
-  color: var(--brand);
-  background: var(--bg);
-  padding: 0.1rem 0.4rem; border-radius: 4px;
-  border: 1px solid var(--brand-line);
+  top: -1.45rem; left: -0.4rem;
+  font-family: var(--mono); font-size: 0.7rem;
+  color: oklch(15% 0.04 340); background: var(--brand);
+  padding: 0.1rem 0.45rem; border-radius: 4px;
+  white-space: nowrap;
+  z-index: 4;
+}
+.demo__page.is-armed .pickable.is-flash {
+  animation: flashCopy 0.55s var(--ease);
+}
+@keyframes flashCopy {
+  0%   { box-shadow: 0 0 0 0 oklch(73% 0.29 340 / 0.6); }
+  60%  { box-shadow: 0 0 0 14px oklch(73% 0.29 340 / 0); }
+  100% { box-shadow: 0 0 0 0 oklch(73% 0.29 340 / 0); }
 }
 
-/* the crosshair */
+/* element 1: button */
+.demo-btn {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  padding: 0.7rem 1.05rem;
+  background: oklch(28% 0.025 340);
+  color: var(--fg);
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  font-weight: 600; font-family: inherit; font-size: 0.92rem;
+}
+.demo-btn--primary {
+  background: var(--brand); color: oklch(14% 0.04 340);
+  border-color: transparent;
+}
+
+/* element 2: avatars */
+.demo-avatars { display: flex; align-items: center; gap: 0.6rem; }
+.demo-avatars__stack { display: flex; }
+.demo-avatars__stack span {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 2px solid var(--bg-raised);
+  margin-left: -8px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 0.7rem; font-weight: 700; color: oklch(14% 0.04 340);
+}
+.demo-avatars__stack span:first-child { margin-left: 0; background: oklch(78% 0.16 90); }
+.demo-avatars__stack span:nth-child(2) { background: oklch(78% 0.16 220); }
+.demo-avatars__stack span:nth-child(3) { background: oklch(78% 0.16 155); }
+.demo-avatars__text { font-size: 0.82rem; color: var(--fg-muted); }
+
+/* element 3: badge */
+.demo-badge {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  font-family: var(--mono); font-size: 0.76rem;
+  padding: 0.3rem 0.7rem;
+  background: oklch(73% 0.22 145 / 0.15);
+  color: oklch(80% 0.20 145);
+  border-radius: 999px;
+  border: 1px solid oklch(73% 0.22 145 / 0.35);
+}
+
+/* crosshair lines + cursor follow pointer in JS */
 .crosshair-h, .crosshair-v {
   position: absolute;
   background: oklch(73% 0.29 340 / 0.55);
   pointer-events: none;
+  z-index: 2;
+  display: none;
+  will-change: transform;
 }
-.crosshair-h { left: 0; right: 0; height: 1px; top: calc(2rem + 1.7rem + 0.4rem + 0.9rem + 1.5rem + 1.3rem); }
-.crosshair-v { top: 0; bottom: 0; width: 1px; left: calc(1.75rem + 1.1rem + 100px); }
+.demo__page.is-armed .crosshair-h,
+.demo__page.is-armed .crosshair-v { display: block; }
+.crosshair-h { left: 0; right: 0; height: 1px; top: 0; }
+.crosshair-v { top: 0; bottom: 0; width: 1px; left: 0; }
 
 .cursor {
   position: absolute;
-  top: calc(2rem + 1.7rem + 0.4rem + 0.9rem + 1.5rem + 1.4rem);
-  left: calc(1.75rem + 1.1rem + 100px);
+  top: 0; left: 0;
   transform: translate(-2px, -2px);
   pointer-events: none;
+  z-index: 3;
+  display: none;
+  will-change: transform;
 }
+.demo__page.is-armed .cursor { display: block; }
 .cursor svg { display: block; filter: drop-shadow(0 0 6px oklch(73% 0.29 340 / 0.6)); }
+
+.copy-toast {
+  position: absolute;
+  top: 0.75rem; left: 0.85rem;
+  font-family: var(--mono); font-size: 0.72rem;
+  color: oklch(15% 0.04 340); background: oklch(73% 0.22 145);
+  padding: 0.3rem 0.65rem; border-radius: 6px;
+  opacity: 0; transform: translateY(-4px);
+  transition: opacity 0.22s var(--ease), transform 0.22s var(--ease);
+  pointer-events: none;
+  z-index: 5;
+  display: flex; align-items: center; gap: 0.35rem;
+}
+.copy-toast svg { width: 12px; height: 12px; }
+.copy-toast.is-on { opacity: 1; transform: translateY(0); }
 
 .demo__output {
   background: oklch(13% 0.01 340);
@@ -567,38 +657,70 @@ button { font-family: inherit; }
       </div>
     </div>
 
-    <div class="demo" aria-hidden="true">
+    <div class="demo" id="demo">
       <div class="demo__chrome">
         <span class="dot"></span><span class="dot"></span><span class="dot"></span>
         <span class="demo__url">your-app.localhost:3000/dashboard</span>
       </div>
       <div class="demo__stage">
-        <div class="demo__page">
-          <div class="fake-h1">Subscription</div>
-          <p class="fake-p">Renews in 14 days. Cancel anytime — no fees, no questions.</p>
-          <div class="target">Upgrade plan
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        <div class="demo__page is-armed" id="demoPage">
+          <div class="demo__hint">click the icon to arm</div>
+          <div class="copy-toast" id="demoToast">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            copied to clipboard
           </div>
-          <div class="crosshair-h"></div>
-          <div class="crosshair-v"></div>
-          <div class="cursor">
+
+          <div class="fake-h1">Subscription</div>
+          <p class="fake-p">Renews in 14 days. Cancel anytime, no fees, no questions.</p>
+
+          <div class="demo__items">
+            <button class="pickable demo-btn demo-btn--primary"
+                    data-tag="&lt;button&gt;"
+                    data-component="UpgradeButton"
+                    data-source="src/billing/UpgradeButton.vue:42"
+                    data-framework="Vue 3"
+                    data-html='&lt;button class="btn primary"&gt;Upgrade plan&lt;/button&gt;'>
+              Upgrade plan
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+
+            <div class="pickable demo-avatars"
+                 data-tag="&lt;AvatarGroup&gt;"
+                 data-component="AvatarGroup"
+                 data-source="src/team/AvatarGroup.tsx:18"
+                 data-framework="React"
+                 data-html='&lt;div class="avatars"&gt;3 teammates online&lt;/div&gt;'>
+              <div class="demo-avatars__stack">
+                <span>JD</span><span>MK</span><span>RT</span>
+              </div>
+              <span class="demo-avatars__text">3 teammates online</span>
+            </div>
+
+            <span class="pickable demo-badge"
+                  data-tag="&lt;Badge&gt;"
+                  data-component="StatusBadge"
+                  data-source="src/lib/StatusBadge.svelte:7"
+                  data-framework="Svelte"
+                  data-html='&lt;span class="badge"&gt;● Active&lt;/span&gt;'>
+              ● Active
+            </span>
+          </div>
+
+          <div class="crosshair-h" id="demoH"></div>
+          <div class="crosshair-v" id="demoV"></div>
+          <div class="cursor" id="demoCursor">
             <svg width="20" height="22" viewBox="0 0 24 26" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M3 2 L3 22 L8 17 L11 24 L14 23 L11 16 L18 16 Z" fill="oklch(73% 0.29 340)" stroke="oklch(98% 0 0)" stroke-width="1.4" stroke-linejoin="round"/>
             </svg>
           </div>
         </div>
-        <div class="demo__output">
-          <div class="label">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-            on your clipboard
-          </div>
-<pre style="margin:0; white-space:pre-wrap;"><span class="punc">&lt;</span><span class="key">button</span> <span class="punc">class=</span><span class="path">"btn primary"</span><span class="punc">&gt;</span>
-  Upgrade plan
-<span class="punc">&lt;/</span><span class="key">button</span><span class="punc">&gt;</span>
 
-<span class="punc">// Component:</span> <span class="comp">UpgradeButton</span>
-<span class="punc">// Source:</span>    <span class="path">src/billing/UpgradeButton.vue:42</span>
-<span class="punc">// Framework:</span> <span class="comp">Vue 3</span></pre>
+        <div class="demo__output">
+          <div class="label" id="demoLabel">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <span>hover any element →</span>
+          </div>
+<pre id="demoCode" style="margin:0; white-space:pre-wrap;"><span class="punc">// pick something on the left.</span></pre>
         </div>
       </div>
     </div>
@@ -769,6 +891,139 @@ button { font-family: inherit; }
     </div>
   </div>
 </footer>
+
+<script>
+(function () {
+  var page = document.getElementById("demoPage");
+  if (!page) return;
+
+  var h = document.getElementById("demoH");
+  var v = document.getElementById("demoV");
+  var cursor = document.getElementById("demoCursor");
+  var toast = document.getElementById("demoToast");
+  var code = document.getElementById("demoCode");
+  var labelText = document.querySelector("#demoLabel span");
+  var items = page.querySelectorAll(".pickable");
+  var raf = 0;
+  var pendingX = -1, pendingY = -1;
+  var hovered = null;
+  var toastTimer = 0;
+
+  function flush() {
+    raf = 0;
+    if (pendingX < 0) return;
+    h.style.transform = "translate3d(0, " + pendingY + "px, 0)";
+    v.style.transform = "translate3d(" + pendingX + "px, 0, 0)";
+    cursor.style.transform = "translate3d(" + (pendingX - 2) + "px, " + (pendingY - 2) + "px, 0)";
+  }
+
+  function onMove(e) {
+    if (!page.classList.contains("is-armed")) return;
+    var rect = page.getBoundingClientRect();
+    pendingX = e.clientX - rect.left;
+    pendingY = e.clientY - rect.top;
+    if (!raf) raf = requestAnimationFrame(flush);
+
+    // hit-test: which pickable is under the pointer?
+    var found = null;
+    for (var i = 0; i < items.length; i++) {
+      var r = items[i].getBoundingClientRect();
+      if (e.clientX >= r.left && e.clientX <= r.right &&
+          e.clientY >= r.top && e.clientY <= r.bottom) {
+        found = items[i];
+        break;
+      }
+    }
+    if (found !== hovered) {
+      if (hovered) hovered.classList.remove("is-hover");
+      if (found) found.classList.add("is-hover");
+      hovered = found;
+      preview(found);
+    }
+  }
+
+  function onLeave() {
+    if (hovered) hovered.classList.remove("is-hover");
+    hovered = null;
+    pendingX = -1; pendingY = -1;
+    h.style.transform = "translate3d(-9999px,0,0)";
+    v.style.transform = "translate3d(-9999px,0,0)";
+    cursor.style.transform = "translate3d(-9999px,-9999px,0)";
+    labelText.textContent = "hover any element →";
+    code.innerHTML = '<span class="punc">// pick something on the left.</span>';
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, function (c) {
+      return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c];
+    });
+  }
+
+  function frameworkColor(fw) {
+    if (fw === "React") return "var(--code-react)";
+    if (fw === "Svelte") return "var(--code-svelte)";
+    return "var(--code-vue)";
+  }
+
+  function preview(el) {
+    if (!el) return;
+    var html = el.getAttribute("data-html");
+    var comp = el.getAttribute("data-component");
+    var src  = el.getAttribute("data-source");
+    var fw   = el.getAttribute("data-framework");
+    var color = frameworkColor(fw);
+    labelText.textContent = "preview · click to copy";
+    code.innerHTML =
+      escapeHtml(html) + "\n\n" +
+      '<span class="punc">// Component:</span> <span style="color: ' + color + '">' + escapeHtml(comp) + '</span>\n' +
+      '<span class="punc">// Source:</span>    <span class="path">' + escapeHtml(src) + '</span>\n' +
+      '<span class="punc">// Framework:</span> <span style="color: ' + color + '">' + escapeHtml(fw) + '</span>';
+  }
+
+  function onClick(e) {
+    if (!page.classList.contains("is-armed")) return;
+    if (!hovered) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    var el = hovered;
+    var html = el.getAttribute("data-html");
+    var comp = el.getAttribute("data-component");
+    var src  = el.getAttribute("data-source");
+    var fw   = el.getAttribute("data-framework");
+
+    var clipboard =
+      html + "\n\n" +
+      "// Component: " + comp + "\n" +
+      "// Source:    " + src + "\n" +
+      "// Framework: " + fw;
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(clipboard).catch(function () {});
+    }
+
+    el.classList.remove("is-flash");
+    void el.offsetWidth; // restart animation
+    el.classList.add("is-flash");
+
+    toast.classList.add("is-on");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toast.classList.remove("is-on"); }, 1400);
+
+    labelText.textContent = "copied · paste anywhere";
+  }
+
+  page.addEventListener("pointermove", onMove);
+  page.addEventListener("pointerleave", onLeave);
+  page.addEventListener("click", onClick, true);
+
+  // Optional: click the demo url bar / chrome to toggle armed state.
+  // (Currently always armed inside the demo zone.)
+
+  // initial preview = the first pickable
+  if (items[0]) preview(items[0]);
+})();
+</script>
 
 </body>
 </html>

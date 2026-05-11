@@ -1,14 +1,19 @@
 {
   "manifest_version": 3,
   "name": "Grab Context",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Click any element to copy it as Markdown for AI coding assistants. Detects React, Vue, and Svelte components.",
   "author": "Tomer Danan",
-  "homepage_url": "https://github.com/aidenybai/react-grab",
+  "homepage_url": "https://github.com/Dananz/grab-context",
   "browser_specific_settings": {
     "gecko": {
-      "id": "grab-context@tomerdanan.dev",
-      "strict_min_version": "128.0"
+      "id": "grab-context@dananz.github.io",
+      "strict_min_version": "128.0",
+      "data_collection_permissions": {
+        "required": [
+          "none"
+        ]
+      }
     }
   },
   "icons": {

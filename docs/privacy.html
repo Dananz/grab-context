@@ -1,0 +1,396 @@
+---
+layout: none
+permalink: /privacy
+---
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Grab Context — Privacy Policy</title>
+<meta name="description" content="Grab Context Firefox extension privacy policy. No analytics, no telemetry, nothing leaves your device.">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+<link href="https://api.fontshare.com/v2/css?f[]=general-sans@500,600,700&f[]=jetbrains-mono@400,500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:           oklch(14% 0.012 340);
+  --bg-raised:    oklch(19% 0.015 340);
+  --bg-elevated:  oklch(23% 0.018 340);
+  --line:         oklch(28% 0.02 340);
+  --line-strong:  oklch(38% 0.04 340);
+  --fg:           oklch(97% 0.005 340);
+  --fg-muted:     oklch(72% 0.015 340);
+  --fg-dim:       oklch(56% 0.02 340);
+  --brand:        oklch(73% 0.29 340);
+  --brand-soft:   oklch(73% 0.29 340 / 0.18);
+  --brand-line:   oklch(73% 0.29 340 / 0.45);
+  --sans: "General Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--sans);
+  font-weight: 500;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  animation: pageIn 0.5s var(--ease) both;
+}
+@keyframes pageIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+a { color: var(--brand); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; text-decoration-color: var(--brand-line); }
+a:hover { text-decoration-color: var(--brand); }
+code {
+  font-family: var(--mono); font-size: 0.86em;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  padding: 0.1em 0.4em;
+  border-radius: 5px;
+}
+
+.shell {
+  width: min(740px, calc(100% - clamp(2rem, 5vw, 4rem)));
+  margin-inline: auto;
+}
+
+/* ─── nav ───────────────────────────────────────────── */
+.nav {
+  position: sticky; top: 0; z-index: 50;
+  backdrop-filter: blur(12px) saturate(140%);
+  background: oklch(14% 0.012 340 / 0.7);
+  border-bottom: 1px solid oklch(28% 0.02 340 / 0.5);
+}
+.nav__row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1.1rem 0;
+}
+.brand {
+  display: flex; align-items: center; gap: 0.65rem;
+  font-weight: 700; letter-spacing: -0.01em;
+  text-decoration: none; color: var(--fg);
+}
+.brand__mark { width: 28px; height: 28px; border-radius: 6px; }
+.nav__back {
+  font-size: 0.88rem; color: var(--fg-muted); text-decoration: none;
+  display: inline-flex; align-items: center; gap: 0.45rem;
+  transition: color 0.2s var(--ease);
+}
+.nav__back:hover { color: var(--fg); text-decoration: none; }
+.nav__back svg { width: 14px; height: 14px; }
+
+/* ─── header ────────────────────────────────────────── */
+.header {
+  padding: clamp(3.5rem, 9vw, 6rem) 0 clamp(2rem, 4vw, 3rem);
+}
+.header .shell { width: min(820px, calc(100% - clamp(2rem, 5vw, 4rem))); }
+
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  font-family: var(--mono); font-size: 0.74rem;
+  color: var(--brand);
+  background: var(--brand-soft);
+  border: 1px solid var(--brand-line);
+  padding: 0.3rem 0.65rem; border-radius: 999px;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  margin-bottom: 1.5rem;
+}
+
+.title {
+  font-size: clamp(2.4rem, 5.5vw, 3.75rem);
+  font-weight: 700;
+  line-height: 0.98;
+  letter-spacing: -0.03em;
+  margin: 0 0 1.25rem;
+}
+.title em { font-style: normal; color: var(--brand); }
+
+.meta {
+  display: flex; gap: 1.25rem; flex-wrap: wrap;
+  font-family: var(--mono); font-size: 0.8rem; color: var(--fg-dim);
+  margin: 0;
+}
+.meta strong { color: var(--fg-muted); font-weight: 500; }
+
+.tldr {
+  margin: 2.25rem 0 0;
+  padding: 1.4rem 1.5rem;
+  background: var(--bg-raised);
+  border-left: 3px solid var(--brand);
+  border-radius: 4px 12px 12px 4px;
+  color: var(--fg-muted);
+  font-size: 1.02rem;
+  line-height: 1.55;
+}
+.tldr strong { color: var(--fg); font-weight: 600; }
+
+/* ─── prose ─────────────────────────────────────────── */
+.prose {
+  padding: clamp(2rem, 4vw, 3.5rem) 0 clamp(4rem, 8vw, 6rem);
+}
+.prose__lead {
+  font-size: 1.18rem;
+  line-height: 1.6;
+  color: var(--fg-muted);
+  margin: 0 0 2.5rem;
+  max-width: 60ch;
+}
+.prose h2 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 3.25rem 0 1rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--line);
+  display: flex; align-items: baseline; gap: 0.7rem;
+}
+.prose h2::before {
+  content: attr(data-no);
+  font-family: var(--mono); font-size: 0.78rem;
+  color: var(--brand);
+  font-weight: 500;
+  letter-spacing: 0.05em;
+}
+.prose p {
+  margin: 0 0 1.15rem;
+  font-size: 1rem;
+  color: var(--fg-muted);
+  max-width: 65ch;
+}
+.prose p strong { color: var(--fg); font-weight: 600; }
+.prose ul {
+  margin: 0 0 1.25rem;
+  padding: 0;
+  list-style: none;
+  max-width: 65ch;
+}
+.prose li {
+  position: relative;
+  padding: 0.1rem 0 0.1rem 1.4rem;
+  margin-bottom: 0.65rem;
+  color: var(--fg-muted);
+}
+.prose li::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0.65em;
+  width: 6px; height: 6px;
+  background: var(--brand);
+  border-radius: 1px;
+  transform: rotate(45deg);
+}
+.prose li strong { color: var(--fg); font-weight: 600; }
+
+/* dependency list */
+.deps {
+  margin: 0.5rem 0 1.5rem;
+  display: grid; gap: 0.5rem;
+  max-width: 65ch;
+}
+.deps__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem; align-items: baseline;
+  padding: 0.75rem 1rem;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 0.92rem;
+}
+.deps__name {
+  font-family: var(--mono); font-size: 0.9em;
+  color: var(--fg);
+}
+.deps__by { color: var(--fg-dim); font-size: 0.85em; }
+
+/* permissions cards */
+.perms {
+  display: grid; gap: 0.75rem;
+  margin: 0 0 1.5rem;
+  max-width: 65ch;
+}
+.perm {
+  padding: 1rem 1.15rem;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+}
+.perm__name {
+  font-family: var(--mono); font-size: 0.84rem;
+  color: var(--brand);
+  margin-bottom: 0.35rem;
+  font-weight: 500;
+}
+.perm__why { margin: 0; color: var(--fg-muted); font-size: 0.94rem; line-height: 1.55; }
+
+/* ─── footer ────────────────────────────────────────── */
+.footer {
+  padding: 2.25rem 0 3rem;
+  border-top: 1px solid var(--line);
+  color: var(--fg-dim); font-size: 0.85rem;
+}
+.footer__row {
+  display: flex; justify-content: space-between; flex-wrap: wrap;
+  gap: 1.5rem;
+}
+.footer a { color: var(--fg-muted); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line-strong); }
+.footer a:hover { color: var(--fg); text-decoration-color: var(--brand); }
+
+::selection { background: oklch(73% 0.29 340 / 0.35); color: var(--fg); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="shell nav__row">
+    <a class="brand" href="/grab-context/">
+      <img class="brand__mark" src="assets/icon.svg" alt="">
+      Grab Context
+    </a>
+    <a class="nav__back" href="/grab-context/">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Back to site
+    </a>
+  </div>
+</nav>
+
+<header class="header">
+  <div class="shell">
+    <div class="eyebrow">Legal · plain English</div>
+    <h1 class="title">Privacy <em>policy.</em></h1>
+    <p class="meta">
+      <span><strong>Last updated</strong> &nbsp; 11 May 2026</span>
+      <span><strong>Version</strong> &nbsp; 0.1.0</span>
+    </p>
+    <aside class="tldr">
+      <strong>The short version.</strong> Grab Context runs entirely in your browser. It has no
+      analytics, no telemetry, no account, no remote configuration. The only thing the
+      extension writes off your device is the Markdown or PNG you explicitly asked it to put
+      on your clipboard.
+    </aside>
+  </div>
+</header>
+
+<main class="prose">
+  <div class="shell">
+    <p class="prose__lead">
+      Grab Context is a Firefox extension that copies the HTML of a clicked element as
+      Markdown so you can paste it into AI coding assistants. It does not contain analytics,
+      telemetry, error reporting, advertising, or any other code that transmits data off
+      your device.
+    </p>
+
+    <h2 data-no="01.">Data the extension stores</h2>
+    <p>The extension stores <strong>one boolean value</strong> in <a href="https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/storage/local"><code>chrome.storage.local</code></a>:</p>
+    <ul>
+      <li>
+        <strong><code>react_grab_enabled</code></strong> — whether the extension's in-page UI is
+        turned on. Synchronised across tabs on the same Firefox profile by the browser.
+        Never transmitted off device.
+      </li>
+    </ul>
+    <p>
+      The underlying <a href="https://github.com/aidenybai/react-grab"><code>react-grab</code></a>
+      library also persists a small UI-preference object (toolbar position, collapsed or
+      expanded, default action) in <code>window.localStorage</code> of each origin you
+      visit. That object stays in the page's own origin and is never transmitted off device.
+    </p>
+
+    <h2 data-no="02.">Data the extension reads</h2>
+    <ul>
+      <li>
+        <strong>The HTML of an element you explicitly click</strong> while the selection
+        cursor is armed. The HTML is converted to Markdown locally by
+        <a href="https://github.com/mixmark-io/turndown">Turndown</a> and written to your
+        system clipboard via <code>navigator.clipboard.write</code>. Nothing leaves your
+        device.
+      </li>
+      <li>
+        <strong>The bounding rect of an element you explicitly capture</strong> via the
+        Screenshot action. The visible viewport of the active tab is captured locally via
+        <a href="https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/tabs/captureVisibleTab"><code>chrome.tabs.captureVisibleTab</code></a>,
+        cropped to the rect in the content script, and written to your system clipboard.
+        Nothing leaves your device.
+      </li>
+    </ul>
+    <p>
+      The extension never reads the contents of pages you have not interacted with, and
+      never reads form values, cookies, passwords, headers, or any other page state besides
+      the element you clicked.
+    </p>
+
+    <h2 data-no="03.">Permissions</h2>
+    <div class="perms">
+      <div class="perm">
+        <div class="perm__name">storage</div>
+        <p class="perm__why">Required to remember whether the in-page UI is enabled.</p>
+      </div>
+      <div class="perm">
+        <div class="perm__name">activeTab</div>
+        <p class="perm__why">Required for <code>chrome.tabs.captureVisibleTab</code> so the Screenshot action can capture the current viewport. Invoked only after you explicitly trigger Screenshot.</p>
+      </div>
+      <div class="perm">
+        <div class="perm__name">&lt;all_urls&gt;  host permission</div>
+        <p class="perm__why">Required to inject the selection cursor into whatever page you click on. The injection is purely UI; no page content is read unless you click an element with the cursor armed, and even then the result is only written to your local clipboard.</p>
+      </div>
+    </div>
+
+    <h2 data-no="04.">Third-party code</h2>
+    <p>The extension bundles, at build time, the following MIT-licensed dependencies:</p>
+    <div class="deps">
+      <div class="deps__row">
+        <a class="deps__name" href="https://github.com/aidenybai/react-grab">react-grab @ 0.1.29</a>
+        <span class="deps__by">Aiden Bai</span>
+      </div>
+      <div class="deps__row">
+        <a class="deps__name" href="https://github.com/aidenybai/bippy">bippy</a>
+        <span class="deps__by">Aiden Bai, transitive</span>
+      </div>
+      <div class="deps__row">
+        <a class="deps__name" href="https://github.com/mixmark-io/turndown">turndown</a>
+        <span class="deps__by">Dom Christie</span>
+      </div>
+      <div class="deps__row">
+        <a class="deps__name" href="https://github.com/phosphor-icons/core">Phosphor Icons</a>
+        <span class="deps__by">Helena Zhang &amp; Tobias Fried</span>
+      </div>
+    </div>
+    <p>
+      No remote code is loaded at runtime. All JavaScript is bundled at build time. Anyone
+      can verify this by unpacking the signed <code>.xpi</code> and comparing it against the
+      <a href="https://github.com/Dananz/grab-context">source repository</a>.
+    </p>
+
+    <h2 data-no="05.">Source &amp; contact</h2>
+    <p>
+      Full source: <a href="https://github.com/Dananz/grab-context">github.com/Dananz/grab-context</a>.
+      Questions, concerns, or vulnerabilities: please
+      <a href="https://github.com/Dananz/grab-context/issues">open an issue</a>.
+    </p>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="shell footer__row">
+    <div>Grab Context · MIT licensed</div>
+    <div>
+      <a href="/grab-context/">Home</a> &nbsp;·&nbsp;
+      <a href="https://github.com/Dananz/grab-context">GitHub</a> &nbsp;·&nbsp;
+      <a href="https://github.com/Dananz/grab-context/issues">Issues</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

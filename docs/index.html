@@ -1,0 +1,774 @@
+---
+layout: none
+---
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Grab Context — context for AI coding agents, from any web page</title>
+<meta name="description" content="Firefox extension. Click any element on a page, copy it as Markdown ready to paste into Cursor, Claude, Copilot. Detects React, Vue, and Svelte components.">
+<meta property="og:title" content="Grab Context">
+<meta property="og:description" content="Click any element on a page. Paste it into your AI coding tool. Component names included.">
+<meta property="og:image" content="https://dananz.github.io/grab-context/assets/icon-128.png">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+<link href="https://api.fontshare.com/v2/css?f[]=general-sans@500,600,700&f[]=jetbrains-mono@400,500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:           oklch(14% 0.012 340);
+  --bg-raised:    oklch(19% 0.015 340);
+  --bg-elevated:  oklch(23% 0.018 340);
+  --line:         oklch(28% 0.02 340);
+  --line-strong:  oklch(38% 0.04 340);
+  --fg:           oklch(97% 0.005 340);
+  --fg-muted:     oklch(72% 0.015 340);
+  --fg-dim:       oklch(56% 0.02 340);
+  --brand:        oklch(73% 0.29 340);
+  --brand-soft:   oklch(73% 0.29 340 / 0.18);
+  --brand-line:   oklch(73% 0.29 340 / 0.45);
+  --code-react:   oklch(78% 0.13 220);
+  --code-vue:     oklch(78% 0.16 155);
+  --code-svelte:  oklch(73% 0.20 35);
+  --sans: "General Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--sans);
+  font-weight: 500;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+/* page-load fade */
+body { animation: pageIn 0.6s var(--ease) both; }
+@keyframes pageIn { from { opacity: 0; } to { opacity: 1; } }
+
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; }
+
+.shell {
+  width: min(1280px, calc(100% - clamp(2rem, 5vw, 5rem)));
+  margin-inline: auto;
+}
+
+/* ─── nav ───────────────────────────────────────────── */
+.nav {
+  position: sticky; top: 0; z-index: 50;
+  backdrop-filter: blur(12px) saturate(140%);
+  background: oklch(14% 0.012 340 / 0.7);
+  border-bottom: 1px solid oklch(28% 0.02 340 / 0.5);
+}
+.nav__row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1.1rem 0;
+}
+.brand {
+  display: flex; align-items: center; gap: 0.65rem;
+  font-weight: 700; letter-spacing: -0.01em;
+}
+.brand__mark {
+  width: 28px; height: 28px; border-radius: 6px;
+}
+.nav__links { display: flex; gap: 1.5rem; align-items: center; color: var(--fg-muted); }
+.nav__links a { font-size: 0.92rem; transition: color 0.2s var(--ease); }
+.nav__links a:hover { color: var(--fg); }
+.nav__cta {
+  font-size: 0.85rem; font-weight: 600;
+  background: var(--brand); color: oklch(15% 0.04 340);
+  padding: 0.5rem 0.85rem; border-radius: 7px;
+}
+.nav__cta:hover { background: oklch(78% 0.29 340); }
+@media (max-width: 640px) {
+  .nav__links a:not(.nav__cta) { display: none; }
+}
+
+/* ─── hero ──────────────────────────────────────────── */
+.hero {
+  padding: clamp(4rem, 12vw, 9rem) 0 clamp(3rem, 8vw, 6rem);
+  position: relative;
+}
+.hero__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: clamp(2rem, 6vw, 5rem);
+  align-items: center;
+}
+@media (max-width: 880px) {
+  .hero__grid { grid-template-columns: 1fr; }
+}
+
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  font-family: var(--mono); font-size: 0.78rem;
+  color: var(--brand);
+  background: var(--brand-soft);
+  border: 1px solid var(--brand-line);
+  padding: 0.35rem 0.7rem; border-radius: 999px;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  margin-bottom: 1.25rem;
+  width: max-content;
+}
+.eyebrow__dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--brand);
+  box-shadow: 0 0 8px var(--brand);
+  animation: pulse 1.8s var(--ease) infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+.hero__title {
+  font-size: clamp(2.75rem, 7.2vw, 6.5rem);
+  font-weight: 700;
+  line-height: 0.92;
+  letter-spacing: -0.035em;
+  margin: 0 0 1.5rem;
+}
+.hero__title em {
+  font-style: normal;
+  color: var(--brand);
+}
+.hero__lead {
+  font-size: clamp(1.05rem, 1.6vw, 1.3rem);
+  color: var(--fg-muted);
+  line-height: 1.55;
+  max-width: 38ch;
+  margin: 0 0 2rem;
+}
+.hero__lead strong { color: var(--fg); font-weight: 600; }
+
+.cta-row {
+  display: flex; gap: 0.85rem; flex-wrap: wrap; align-items: center;
+}
+.btn {
+  display: inline-flex; align-items: center; gap: 0.55rem;
+  font-weight: 600; font-size: 0.95rem;
+  padding: 0.85rem 1.25rem; border-radius: 10px;
+  transition: transform 0.18s var(--ease), background 0.18s var(--ease), border-color 0.18s var(--ease);
+}
+.btn--primary {
+  background: var(--brand);
+  color: oklch(14% 0.04 340);
+}
+.btn--primary:hover {
+  background: oklch(78% 0.29 340);
+  transform: translateY(-1px);
+}
+.btn--ghost {
+  background: transparent;
+  color: var(--fg);
+  border: 1px solid var(--line-strong);
+}
+.btn--ghost:hover { border-color: var(--brand); }
+.btn__icon { width: 18px; height: 18px; }
+
+.meta-row {
+  display: flex; gap: 1.5rem; flex-wrap: wrap;
+  margin-top: 1.5rem; font-size: 0.85rem; color: var(--fg-dim);
+  font-family: var(--mono);
+}
+.meta-row span { display: inline-flex; gap: 0.4rem; }
+.meta-row svg { width: 14px; height: 14px; opacity: 0.85; }
+
+/* ─── hero demo ─────────────────────────────────────── */
+.demo {
+  position: relative;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow:
+    0 1px 0 oklch(100% 0 0 / 0.04) inset,
+    0 30px 70px -30px oklch(0% 0 0 / 0.65),
+    0 0 0 1px oklch(73% 0.29 340 / 0.05);
+}
+.demo__chrome {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--line);
+  background: oklch(17% 0.014 340);
+}
+.dot { width: 11px; height: 11px; border-radius: 50%; background: oklch(38% 0.03 340); }
+.demo__url {
+  margin-left: 0.5rem; font-family: var(--mono); font-size: 0.78rem;
+  color: var(--fg-dim);
+}
+.demo__url::before { content: "●  "; color: oklch(73% 0.22 145); }
+
+.demo__stage {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  min-height: 360px;
+}
+@media (max-width: 700px) {
+  .demo__stage { grid-template-columns: 1fr; }
+}
+
+.demo__page {
+  padding: 2rem 1.75rem;
+  background:
+    linear-gradient(180deg, oklch(20% 0.014 340), oklch(17% 0.012 340));
+  position: relative;
+  overflow: hidden;
+}
+.fake-h1 { font-size: 1.7rem; font-weight: 700; margin: 0 0 0.4rem; letter-spacing: -0.02em; }
+.fake-p  { color: var(--fg-muted); font-size: 0.9rem; margin: 0 0 1.5rem; line-height: 1.5; max-width: 28ch; }
+
+.target {
+  display: inline-flex; align-items: center; gap: 0.55rem;
+  padding: 0.75rem 1.1rem;
+  background: oklch(73% 0.29 340 / 0.08);
+  color: var(--fg);
+  border: 1.5px dashed var(--brand);
+  border-radius: 10px;
+  font-weight: 600;
+  position: relative;
+  animation: targetPulse 2.4s var(--ease) infinite;
+}
+@keyframes targetPulse {
+  0%, 100% { box-shadow: 0 0 0 0 oklch(73% 0.29 340 / 0.5); }
+  50% { box-shadow: 0 0 0 8px oklch(73% 0.29 340 / 0); }
+}
+.target::after {
+  content: "<button>";
+  position: absolute;
+  top: -1.55rem; left: -0.25rem;
+  font-family: var(--mono); font-size: 0.72rem;
+  color: var(--brand);
+  background: var(--bg);
+  padding: 0.1rem 0.4rem; border-radius: 4px;
+  border: 1px solid var(--brand-line);
+}
+
+/* the crosshair */
+.crosshair-h, .crosshair-v {
+  position: absolute;
+  background: oklch(73% 0.29 340 / 0.55);
+  pointer-events: none;
+}
+.crosshair-h { left: 0; right: 0; height: 1px; top: calc(2rem + 1.7rem + 0.4rem + 0.9rem + 1.5rem + 1.3rem); }
+.crosshair-v { top: 0; bottom: 0; width: 1px; left: calc(1.75rem + 1.1rem + 100px); }
+
+.cursor {
+  position: absolute;
+  top: calc(2rem + 1.7rem + 0.4rem + 0.9rem + 1.5rem + 1.4rem);
+  left: calc(1.75rem + 1.1rem + 100px);
+  transform: translate(-2px, -2px);
+  pointer-events: none;
+}
+.cursor svg { display: block; filter: drop-shadow(0 0 6px oklch(73% 0.29 340 / 0.6)); }
+
+.demo__output {
+  background: oklch(13% 0.01 340);
+  border-left: 1px solid var(--line);
+  padding: 1.4rem 1.5rem;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  line-height: 1.65;
+  color: var(--fg-muted);
+  overflow: auto;
+}
+@media (max-width: 700px) {
+  .demo__output { border-left: 0; border-top: 1px solid var(--line); }
+}
+.demo__output .label {
+  font-family: var(--sans);
+  font-size: 0.7rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--fg-dim);
+  margin-bottom: 0.85rem;
+  display: flex; align-items: center; gap: 0.5rem;
+}
+.demo__output .label svg { width: 14px; height: 14px; color: var(--brand); }
+.demo__output .key { color: var(--fg); }
+.demo__output .comp { color: var(--code-vue); }
+.demo__output .path { color: var(--brand); }
+.demo__output .punc { color: var(--fg-dim); }
+
+/* ─── section base ──────────────────────────────────── */
+.section { padding: clamp(4rem, 9vw, 7rem) 0; }
+.section + .section { border-top: 1px solid var(--line); }
+.section__intro {
+  display: grid; grid-template-columns: minmax(0, 0.4fr) minmax(0, 0.6fr);
+  gap: 2rem; margin-bottom: 3rem;
+}
+@media (max-width: 720px) { .section__intro { grid-template-columns: 1fr; } }
+
+.kicker {
+  font-family: var(--mono); font-size: 0.78rem;
+  color: var(--brand);
+  text-transform: uppercase; letter-spacing: 0.12em;
+}
+.section__title {
+  font-size: clamp(1.9rem, 3.5vw, 2.8rem);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.05;
+  margin: 0.5rem 0 0;
+}
+.section__lead {
+  color: var(--fg-muted);
+  font-size: clamp(1rem, 1.2vw, 1.1rem);
+  max-width: 56ch;
+  margin: 0;
+  align-self: center;
+}
+
+/* ─── frameworks ────────────────────────────────────── */
+.frameworks {
+  display: grid; gap: 1.25rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+.fw {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 1.75rem 1.6rem;
+  background: var(--bg-raised);
+  position: relative;
+  transition: border-color 0.25s var(--ease), transform 0.25s var(--ease);
+}
+.fw:hover { border-color: var(--line-strong); transform: translateY(-2px); }
+.fw__logo {
+  width: 38px; height: 38px; margin-bottom: 1rem;
+  display: flex; align-items: center; justify-content: center;
+}
+.fw__title { font-size: 1.1rem; font-weight: 700; margin: 0 0 0.4rem; letter-spacing: -0.015em; }
+.fw__detail {
+  color: var(--fg-muted); font-size: 0.88rem; margin: 0 0 1rem;
+}
+.fw__detail code {
+  font-family: var(--mono); font-size: 0.82em;
+  background: oklch(28% 0.025 340); padding: 0.1em 0.35em; border-radius: 4px;
+  color: var(--fg);
+}
+.fw--react .fw__logo { color: var(--code-react); }
+.fw--vue .fw__logo { color: var(--code-vue); }
+.fw--svelte .fw__logo { color: var(--code-svelte); }
+
+/* ─── features (varied layout, not identical cards) ── */
+.features {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 1.25rem;
+}
+@media (max-width: 880px) { .features { grid-template-columns: 1fr; } }
+
+.tile {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: clamp(1.4rem, 2.5vw, 2rem);
+  background: var(--bg-raised);
+  display: flex; flex-direction: column;
+  position: relative; overflow: hidden;
+  transition: border-color 0.25s var(--ease);
+}
+.tile:hover { border-color: var(--brand-line); }
+.tile h3 {
+  font-size: 1.25rem; font-weight: 700; letter-spacing: -0.015em;
+  margin: 0 0 0.5rem;
+}
+.tile p { color: var(--fg-muted); margin: 0; font-size: 0.95rem; line-height: 1.55; }
+
+.tile--wide { grid-column: span 4; }
+.tile--tall { grid-column: span 2; }
+.tile--full { grid-column: span 6; }
+@media (max-width: 880px) {
+  .tile--wide, .tile--tall, .tile--full { grid-column: span 1; }
+}
+
+.tile__hint {
+  font-family: var(--mono); font-size: 0.74rem;
+  color: var(--brand);
+  text-transform: uppercase; letter-spacing: 0.1em;
+  margin-bottom: 0.85rem;
+}
+
+.tile__art {
+  margin-top: auto;
+  padding-top: 1.5rem;
+  display: flex; gap: 0.6rem; align-items: flex-end;
+}
+
+/* keyboard glyph */
+.kbd {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 28px; height: 28px; padding: 0 0.55em;
+  font-family: var(--mono); font-size: 0.78rem;
+  color: var(--fg);
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-strong);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+}
+
+/* mini crosshair preview */
+.preview-frame {
+  margin-top: 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: oklch(17% 0.012 340);
+  height: 110px;
+  position: relative;
+  overflow: hidden;
+}
+.preview-frame::before, .preview-frame::after {
+  content: ""; position: absolute; background: oklch(73% 0.29 340 / 0.7);
+}
+.preview-frame::before { left: 0; right: 0; height: 1px; top: 58%; }
+.preview-frame::after { top: 0; bottom: 0; width: 1px; left: 60%; }
+.preview-frame .target-mini {
+  position: absolute; top: 35%; left: 30%;
+  padding: 0.4rem 0.7rem;
+  background: oklch(73% 0.29 340 / 0.1);
+  border: 1.5px dashed var(--brand);
+  border-radius: 5px; font-size: 0.7rem;
+  color: var(--fg);
+  font-family: var(--mono);
+}
+
+/* screenshot preview */
+.shot {
+  margin-top: 1.25rem;
+  display: grid; grid-template-columns: 1fr auto 1fr;
+  gap: 0.7rem; align-items: center;
+}
+.shot__src, .shot__dst {
+  border: 1px solid var(--line);
+  background: oklch(17% 0.012 340);
+  border-radius: 10px;
+  height: 95px;
+  position: relative;
+  overflow: hidden;
+}
+.shot__src::after {
+  content: ""; position: absolute; inset: 18% 25%;
+  background:
+    linear-gradient(135deg, oklch(73% 0.29 340 / 0.4), oklch(73% 0.29 340 / 0.05));
+  border: 1.5px dashed var(--brand); border-radius: 4px;
+}
+.shot__dst::after {
+  content: ""; position: absolute; inset: 20% 28% 20% 28%;
+  background:
+    linear-gradient(135deg, oklch(73% 0.29 340 / 0.4), oklch(73% 0.29 340 / 0.05));
+  border-radius: 4px;
+}
+.shot__dst::before {
+  content: "📋"; position: absolute; top: 6px; right: 8px; font-size: 0.85rem; opacity: 0.6;
+}
+.shot__arrow {
+  color: var(--brand); font-size: 1.2rem;
+}
+
+/* ─── install ───────────────────────────────────────── */
+.install {
+  padding: clamp(4rem, 8vw, 6.5rem) 0;
+  border-top: 1px solid var(--line);
+}
+.install__row {
+  display: grid;
+  grid-template-columns: minmax(0, 0.7fr) minmax(0, 0.3fr);
+  gap: 3rem; align-items: end;
+}
+@media (max-width: 760px) { .install__row { grid-template-columns: 1fr; } }
+.install__title {
+  font-size: clamp(2.4rem, 5.5vw, 4rem);
+  font-weight: 700; letter-spacing: -0.03em; line-height: 1;
+  margin: 0 0 1rem;
+}
+.install__title em { font-style: normal; color: var(--brand); }
+.install__sub { color: var(--fg-muted); margin: 0 0 2rem; max-width: 50ch; }
+.install__steps {
+  font-family: var(--mono); font-size: 0.85rem; color: var(--fg-muted);
+  display: grid; gap: 0.65rem;
+}
+.install__steps span { color: var(--brand); margin-right: 0.6rem; }
+
+/* ─── footer ────────────────────────────────────────── */
+.footer {
+  padding: 2.5rem 0 3rem;
+  border-top: 1px solid var(--line);
+  color: var(--fg-dim); font-size: 0.85rem;
+}
+.footer__row {
+  display: flex; justify-content: space-between; flex-wrap: wrap;
+  gap: 1.5rem;
+}
+.footer a { color: var(--fg-muted); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line-strong); }
+.footer a:hover { color: var(--fg); text-decoration-color: var(--brand); }
+.footer__credit { max-width: 56ch; line-height: 1.6; }
+
+::selection { background: oklch(73% 0.29 340 / 0.35); color: var(--fg); }
+
+/* reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="shell nav__row">
+    <a class="brand" href="/grab-context/">
+      <img class="brand__mark" src="assets/icon.svg" alt="Grab Context icon">
+      Grab Context
+    </a>
+    <div class="nav__links">
+      <a href="#how">How it works</a>
+      <a href="#features">Features</a>
+      <a href="https://github.com/Dananz/grab-context">Source</a>
+      <a class="nav__cta" href="https://github.com/Dananz/grab-context/releases/latest">Install</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero shell">
+  <div class="hero__grid">
+    <div>
+      <div class="eyebrow"><span class="eyebrow__dot"></span> Firefox · v0.1.0 signed</div>
+      <h1 class="hero__title">
+        Point. Click.<br>
+        <em>Grab.</em>
+      </h1>
+      <p class="hero__lead">
+        A Firefox extension that turns any element on any web page into
+        <strong>Markdown your coding agent already understands</strong>, with the
+        React, Vue, or Svelte component name and source file already attached.
+      </p>
+      <div class="cta-row">
+        <a class="btn btn--primary" href="https://github.com/Dananz/grab-context/releases/latest">
+          <svg class="btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Install for Firefox
+        </a>
+        <a class="btn btn--ghost" href="https://github.com/Dananz/grab-context">
+          <svg class="btn__icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1.1-.8.1-.8.1-.8 1.3.1 1.9 1.3 1.9 1.3 1.1 1.9 3 1.4 3.7 1 .1-.8.4-1.4.8-1.7-2.7-.3-5.5-1.3-5.5-6 0-1.3.5-2.4 1.3-3.2-.1-.4-.6-1.6.1-3.4 0 0 1-.3 3.4 1.2a11.6 11.6 0 0 1 6.2 0c2.4-1.6 3.4-1.2 3.4-1.2.7 1.8.2 3 .1 3.4.8.8 1.3 2 1.3 3.2 0 4.7-2.9 5.7-5.5 6 .4.4.8 1.1.8 2.3v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3z"/></svg>
+          View source
+        </a>
+      </div>
+      <div class="meta-row">
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg> Mozilla-signed</span>
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6v6H9z"/></svg> MIT licensed</span>
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/></svg> ~110 KB</span>
+      </div>
+    </div>
+
+    <div class="demo" aria-hidden="true">
+      <div class="demo__chrome">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="demo__url">your-app.localhost:3000/dashboard</span>
+      </div>
+      <div class="demo__stage">
+        <div class="demo__page">
+          <div class="fake-h1">Subscription</div>
+          <p class="fake-p">Renews in 14 days. Cancel anytime — no fees, no questions.</p>
+          <div class="target">Upgrade plan
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="crosshair-h"></div>
+          <div class="crosshair-v"></div>
+          <div class="cursor">
+            <svg width="20" height="22" viewBox="0 0 24 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 2 L3 22 L8 17 L11 24 L14 23 L11 16 L18 16 Z" fill="oklch(73% 0.29 340)" stroke="oklch(98% 0 0)" stroke-width="1.4" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </div>
+        <div class="demo__output">
+          <div class="label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            on your clipboard
+          </div>
+<pre style="margin:0; white-space:pre-wrap;"><span class="punc">&lt;</span><span class="key">button</span> <span class="punc">class=</span><span class="path">"btn primary"</span><span class="punc">&gt;</span>
+  Upgrade plan
+<span class="punc">&lt;/</span><span class="key">button</span><span class="punc">&gt;</span>
+
+<span class="punc">// Component:</span> <span class="comp">UpgradeButton</span>
+<span class="punc">// Source:</span>    <span class="path">src/billing/UpgradeButton.vue:42</span>
+<span class="punc">// Framework:</span> <span class="comp">Vue 3</span></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section class="section shell" id="how">
+  <div class="section__intro">
+    <div>
+      <div class="kicker">// how it works</div>
+      <h2 class="section__title">Walks the tree<br>your framework already built.</h2>
+    </div>
+    <p class="section__lead">
+      Most "copy as Markdown" tools hand the model a div with no context. Grab Context follows
+      the React fiber, Vue parent component, or Svelte meta back to the named source file
+      and includes it. Models stop guessing which component you meant.
+    </p>
+  </div>
+
+  <div class="frameworks">
+    <article class="fw fw--react">
+      <div class="fw__logo">
+        <svg width="38" height="38" viewBox="-11.5 -10.23 23 20.46" fill="currentColor"><circle r="2.05"/><g fill="none" stroke="currentColor" stroke-width="1"><ellipse rx="11" ry="4.2"/><ellipse rx="11" ry="4.2" transform="rotate(60)"/><ellipse rx="11" ry="4.2" transform="rotate(120)"/></g></svg>
+      </div>
+      <h3 class="fw__title">React</h3>
+      <p class="fw__detail">
+        Walks the fiber tree via <code>bippy</code> to the nearest composite component
+        and returns its display name plus the source frame Next.js can symbolicate.
+      </p>
+    </article>
+
+    <article class="fw fw--vue">
+      <div class="fw__logo">
+        <svg width="38" height="38" viewBox="0 0 261.76 226.69"><path d="M161.096.001l-30.225 52.351L100.647.001H-.005l130.877 226.688L261.749.001z" fill="currentColor"/><path d="M161.096.001l-30.225 52.351L100.647.001H52.346l78.526 136.01L209.398.001z" fill="currentColor" opacity="0.4"/></svg>
+      </div>
+      <h3 class="fw__title">Vue 3</h3>
+      <p class="fw__detail">
+        Reads <code>__vueParentComponent</code>, pulls <code>__name</code> and <code>__file</code>
+        from the SFC compiler, and folds in <code>data-v-inspector</code> when present.
+      </p>
+    </article>
+
+    <article class="fw fw--svelte">
+      <div class="fw__logo">
+        <svg width="38" height="38" viewBox="0 0 98.1 118" fill="currentColor"><path d="M91.8 15.6C80.9-.1 59.2-4.7 43.6 5.2L16.1 22.8C8.6 27.5 3.4 35.2 1.9 43.9c-1.3 7.3-.2 14.8 3.3 21.3-2.4 3.6-4 7.6-4.7 11.8-1.6 8.9.5 18 5.7 25.4 11 15.7 32.6 20.3 48.2 10.4l27.5-17.5c7.5-4.7 12.7-12.4 14.2-21.1 1.3-7.3.2-14.8-3.3-21.3 2.4-3.6 4-7.6 4.7-11.8 1.7-9-.4-18.1-5.7-25.5"/></svg>
+      </div>
+      <h3 class="fw__title">Svelte</h3>
+      <p class="fw__detail">
+        Reads <code>__svelte_meta</code> in dev builds to get the component file and the
+        exact line your element was emitted from.
+      </p>
+    </article>
+  </div>
+</section>
+
+<section class="section shell" id="features">
+  <div class="section__intro">
+    <div>
+      <div class="kicker">// features</div>
+      <h2 class="section__title">Four behaviours,<br>one click.</h2>
+    </div>
+    <p class="section__lead">
+      The toolbar icon arms a precision cursor and shows on-page guides.
+      Click an element to copy. Press <span class="kbd">S</span> to screenshot the same element to your clipboard as a PNG.
+    </p>
+  </div>
+
+  <div class="features">
+    <article class="tile tile--wide">
+      <div class="tile__hint">// auto-copy</div>
+      <h3>Markdown the moment you click.</h3>
+      <p>
+        HTML converted via Turndown, component name and source file appended as comments.
+        Paste straight into Cursor, Claude, ChatGPT, or Copilot Chat — they already know
+        what to do with it.
+      </p>
+      <div class="tile__art">
+        <span class="kbd">click</span>
+        <span style="font-family: var(--mono); color: var(--fg-dim); font-size: 0.8rem;">→</span>
+        <span style="font-family: var(--mono); color: var(--fg-muted); font-size: 0.82rem;">clipboard.markdown</span>
+      </div>
+    </article>
+
+    <article class="tile tile--tall">
+      <div class="tile__hint">// crosshair</div>
+      <h3>Pixel-precise guides.</h3>
+      <p>Two thin lines that follow the cursor and snap to the element under the pointer.</p>
+      <div class="preview-frame">
+        <span class="target-mini">&lt;button&gt;</span>
+      </div>
+    </article>
+
+    <article class="tile tile--tall">
+      <div class="tile__hint">// screenshot</div>
+      <h3>Element to clipboard as PNG.</h3>
+      <p>Native viewport capture cropped to the selection at <code style="font-family: var(--mono); font-size: 0.85em; color: var(--fg);">devicePixelRatio</code>.</p>
+      <div class="shot">
+        <div class="shot__src"></div>
+        <div class="shot__arrow">→</div>
+        <div class="shot__dst"></div>
+      </div>
+    </article>
+
+    <article class="tile tile--wide">
+      <div class="tile__hint">// auto-arm</div>
+      <h3>One icon click, cursor live.</h3>
+      <p>
+        No two-step "enable then arm" dance. Clicking the toolbar icon turns the picker
+        on and the cursor is already hot. Toggle off and the entire UI is gone from the page.
+      </p>
+      <div class="tile__art" style="gap: 0.4rem;">
+        <span class="kbd">⌘</span>
+        <span class="kbd">↑↓</span>
+        <span style="font-family: var(--mono); color: var(--fg-dim); font-size: 0.78rem; align-self: center;">or just click the icon</span>
+      </div>
+    </article>
+
+    <article class="tile tile--full" style="background: linear-gradient(135deg, oklch(19% 0.015 340), oklch(20% 0.04 340)); border-color: var(--brand-line);">
+      <div class="tile__hint" style="color: var(--brand);">// zero-trust</div>
+      <h3>Nothing leaves your device.</h3>
+      <p>
+        No analytics. No telemetry. No remote configuration. No account.
+        The clipboard is the only destination. The privacy policy is one page long.
+      </p>
+    </article>
+  </div>
+</section>
+
+<section class="install" id="install">
+  <div class="shell install__row">
+    <div>
+      <h2 class="install__title">Install in <em>30 seconds.</em></h2>
+      <p class="install__sub">
+        Mozilla-signed. Permanent install on regular Firefox 128 or later. Self-distributed
+        via GitHub Releases — no Chrome Web Store middleman, no listing review.
+      </p>
+      <a class="btn btn--primary" href="https://github.com/Dananz/grab-context/releases/latest">
+        <svg class="btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download the .xpi
+      </a>
+    </div>
+    <ol class="install__steps">
+      <li><span>01</span> Open the release page in Firefox</li>
+      <li><span>02</span> Click the <code style="font-family: var(--mono); color: var(--brand);">.xpi</code> file</li>
+      <li><span>03</span> Confirm the install prompt</li>
+      <li><span>04</span> Click the toolbar icon to arm</li>
+    </ol>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="shell footer__row">
+    <div class="footer__credit">
+      Element-selection engine is
+      <a href="https://github.com/aidenybai/react-grab">react-grab</a>
+      by Aiden Bai (MIT). Component name detection via
+      <a href="https://github.com/aidenybai/bippy">bippy</a>.
+      Markdown conversion via
+      <a href="https://github.com/mixmark-io/turndown">Turndown</a>.
+      Icon glyph from
+      <a href="https://github.com/phosphor-icons/core">Phosphor</a>.
+      This Firefox build by Tomer Danan, MIT.
+    </div>
+    <div>
+      <a href="privacy">Privacy</a> &nbsp;·&nbsp;
+      <a href="https://github.com/Dananz/grab-context">GitHub</a> &nbsp;·&nbsp;
+      <a href="https://github.com/Dananz/grab-context/issues">Issues</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

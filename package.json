@@ -1,6 +1,6 @@
 {
   "name": "grab-context",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "description": "Firefox extension that copies any clicked element as Markdown for AI coding assistants. Bundles react-grab (MIT, Aiden Bai) for component detection.",
